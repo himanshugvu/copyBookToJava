@@ -35,17 +35,22 @@ public class CopybookParserFacade {
         int recordLength = extractRecordLength(lines);
 
         List<CobolToken> tokens = tokenizer.tokenize(lines);
+        // The AstBuilder now returns a ParseResult containing the raw AST in `referenceFields`
         ParseResult result = astBuilder.build(tokens);
         result.setFileName(copybookPath.getFileName().toString());
         result.setTotalLength(recordLength);
 
         // --- Processing Pipeline ---
-        // 1. Calculate initial positions for the raw AST
+        // 1. Calculate initial positions and lengths for the raw AST
         positionProcessor.process(result);
-        // 2. Identify copybook pattern and create distinct record layouts
+        // 2. Intelligently create record layouts based on the detected copybook pattern
         layoutProcessor.process(result);
-        // 3. Expand OCCURS clauses within the generated layouts
+        // 3. Expand OCCURS clauses within the final, generated layouts
         occursProcessor.process(result);
+
+        // Clear the raw reference fields, as they have been processed into layouts
+        // and are no longer needed in the final output.
+        result.getReferenceFields().clear();
 
         return result;
     }
@@ -58,6 +63,6 @@ public class CopybookParserFacade {
                 return Integer.parseInt(matcher.group(1));
             }
         }
-        return 0; // If not found, it will be calculated from the base record later
+        return 300; // Default fallback
     }
 }

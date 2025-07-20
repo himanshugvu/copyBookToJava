@@ -1,12 +1,18 @@
 package com.cobol.parser.processor;
 
 import com.cobol.parser.model.*;
+import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * This processor is the "brain" of the parser. It analyzes the raw AST
+ * to detect the copybook's structural pattern (e.g., multiple 01-level REDEFINES
+ * vs. a shared record type field) and constructs the appropriate record layouts.
+ */
 public class LayoutProcessor implements AstProcessor {
 
     private enum CopybookPattern {
-        MULTIPLE_01_LEVELS,
+        MULTIPLE_01_LEVEL_REDEFINES,
         SHARED_RECORD_TYPE,
         UNKNOWN
     }
@@ -16,87 +22,107 @@ public class LayoutProcessor implements AstProcessor {
         CopybookPattern pattern = detectPattern(parseResult.getReferenceFields());
 
         switch (pattern) {
-            case MULTIPLE_01_LEVELS:
+            case MULTIPLE_01_LEVEL_REDEFINES:
                 processMultiple01Levels(parseResult);
                 break;
             case SHARED_RECORD_TYPE:
                 processSharedRecordType(parseResult);
                 break;
             default:
-                // No specific layout pattern detected, do nothing.
+                // Handle unknown or simple structures if necessary
                 break;
         }
-        // The raw AST has served its purpose and is cleared to avoid confusion.
-        parseResult.getReferenceFields().clear();
     }
 
     private CopybookPattern detectPattern(List<CobolField> rootFields) {
-        if (rootFields.isEmpty()) {
-            return CopybookPattern.UNKNOWN;
+        if (rootFields.isEmpty()) return CopybookPattern.UNKNOWN;
+
+        // Check for Multiple 01-Level REDEFINES pattern
+        long countOf01Redefines = rootFields.stream()
+                .filter(f -> f.getLevel() == 1 && f.getRedefines() != null)
+                .count();
+
+        if (countOf01Redefines > 0) {
+            return CopybookPattern.MULTIPLE_01_LEVEL_REDEFINES;
         }
-        long count01Redefines = rootFields.stream().filter(f -> f.getLevel() == 1 && f.getRedefines() != null).count();
-        if (count01Redefines > 0) {
-            return CopybookPattern.MULTIPLE_01_LEVELS;
-        }
-        if (rootFields.get(0).getLevel() == 1 && findSharedRecordTypeField(rootFields.get(0)) != null) {
+
+        // Check for Shared Record Type pattern (01 has children, one of which has 88-levels)
+        CobolField mainRecord = rootFields.get(0);
+        boolean hasSharedType = mainRecord.getChildren().stream()
+                .anyMatch(child -> child.getLevel() < 10 && !child.getConditionNames().isEmpty());
+
+        if (hasSharedType) {
             return CopybookPattern.SHARED_RECORD_TYPE;
         }
+
         return CopybookPattern.UNKNOWN;
     }
 
-    private void processMultiple01Levels(ParseResult result) {
-        CobolField baseRecord = result.getReferenceFields().stream()
-                .filter(f -> f.getLevel() == 1 && f.getRedefines() == null).findFirst().orElse(null);
+    /**
+     * Processes copybooks with the "Multiple 01-Level REDEFINES" pattern.
+     * Example: employee-record.cbl
+     */
+    private void processMultiple01Levels(ParseResult parseResult) {
+        for (CobolField rootField : parseResult.getReferenceFields()) {
+            // We only care about the 01-level records that redefine the base buffer.
+            if (rootField.getLevel() == 1 && rootField.getRedefines() != null) {
+                RecordLayout layout = new RecordLayout(rootField.getName());
+                layout.setRedefines(rootField.getRedefines());
+                layout.setStartPosition(1); // All redefine the same memory area starting at 1
+                layout.setLength(parseResult.getTotalLength());
+                layout.setDescription("Record layout for " + rootField.getName());
 
-        result.getReferenceFields().stream()
-                .filter(f -> f.getLevel() == 1 && f.getRedefines() != null)
-                .forEach(field -> {
-                    RecordLayout layout = new RecordLayout(field.getName());
-                    layout.setRedefines(field.getRedefines());
-                    layout.setStartPosition(1);
-                    layout.setLength(result.getTotalLength());
-                    layout.setDescription("Layout for " + field.getName());
-                    field.getChildren().forEach(child -> layout.getFields().add(deepCopy(child)));
-                    result.getRecordLayouts().add(layout);
-                });
-
-        // Keep the base record as the single reference field
-        if (baseRecord != null) {
-            result.setReferenceFields(List.of(baseRecord));
-        } else {
-            result.getReferenceFields().clear();
+                // The children of the 01-level field are the actual fields of this layout.
+                for (CobolField child : rootField.getChildren()) {
+                    layout.getFields().add(deepCopy(child));
+                }
+                parseResult.getRecordLayouts().add(layout);
+            }
         }
     }
 
-    private void processSharedRecordType(ParseResult result) {
-        CobolField mainRecord = result.getReferenceFields().get(0);
+    /**
+     * Processes copybooks with the "Shared Record Type" pattern.
+     * Example: CAONPOST copybook
+     */
+    private void processSharedRecordType(ParseResult parseResult) {
+        if (parseResult.getReferenceFields().isEmpty()) return;
+
+        CobolField mainRecord = parseResult.getReferenceFields().get(0);
         CobolField recordTypeField = findSharedRecordTypeField(mainRecord);
+
         if (recordTypeField == null) return;
 
         for (ConditionName condition : recordTypeField.getConditionNames()) {
             CobolField layoutStructure = findStructureForCondition(mainRecord, condition.getName());
+
             if (layoutStructure != null) {
                 RecordLayout layout = new RecordLayout(layoutStructure.getName());
                 layout.setRedefines(layoutStructure.getRedefines());
                 layout.setStartPosition(1);
-                layout.setLength(result.getTotalLength());
+                layout.setLength(parseResult.getTotalLength());
                 layout.getRecordTypeValues().add(condition.getValue());
-                layout.setDescription(layoutStructure.getName() + " - identified by " + recordTypeField.getName() + " = '" + condition.getValue() + "'");
+                layout.setDescription(layoutStructure.getName() + " - identified when " + recordTypeField.getName() + " = '" + condition.getValue() + "'");
 
+                // Add the shared record type field to this layout
                 layout.getFields().add(deepCopy(recordTypeField));
+
+                // Add the specific fields for this layout
                 for (CobolField child : layoutStructure.getChildren()) {
                     layout.getFields().add(deepCopy(child));
                 }
-                result.getRecordLayouts().add(layout);
+                parseResult.getRecordLayouts().add(layout);
             }
         }
-        result.setReferenceFields(List.of(mainRecord));
     }
 
     private CobolField findSharedRecordTypeField(CobolField mainRecord) {
-        return mainRecord.getChildren().stream()
-                .filter(child -> child.getLevel() < 10 && !child.getConditionNames().isEmpty() && child.getRedefines() == null)
-                .findFirst().orElse(null);
+        for (CobolField child : mainRecord.getChildren()) {
+            if (child.getLevel() < 10 && !child.getConditionNames().isEmpty() && child.getRedefines() == null) {
+                return child;
+            }
+        }
+        return null;
     }
 
     private CobolField findStructureForCondition(CobolField mainRecord, String conditionName) {
@@ -106,9 +132,12 @@ public class LayoutProcessor implements AstProcessor {
         else if (conditionName.contains("TRL")) targetNamePart = "TRAILER";
         else return null;
 
-        return mainRecord.getChildren().stream()
-                .filter(child -> child.getName().contains(targetNamePart))
-                .findFirst().orElse(null);
+        for (CobolField child : mainRecord.getChildren()) {
+            if (child.getName().contains(targetNamePart)) {
+                return child;
+            }
+        }
+        return null;
     }
 
     private CobolField deepCopy(CobolField original) {
@@ -126,8 +155,7 @@ public class LayoutProcessor implements AstProcessor {
         copy.setRedefines(original.getRedefines());
         copy.setValue(original.getValue());
 
-        original.getConditionNames().forEach(cn -> copy.getConditionNames().add(new ConditionName(cn.getName(), cn.getValue())));
-        original.getArrayElements().forEach(ae -> copy.getArrayElements().add(ae));
+        original.getConditionNames().forEach(cn -> copy.addConditionName(new ConditionName(cn.getName(), cn.getValue())));
         original.getChildren().forEach(child -> copy.addChild(deepCopy(child)));
 
         return copy;
