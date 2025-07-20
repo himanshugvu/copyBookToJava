@@ -14,7 +14,7 @@ public class OccursProcessor implements AstProcessor {
 
     private void expandOccursInFields(List<CobolField> fields) {
         for (CobolField field : fields) {
-            if (field.getOccursCount() > 0) {
+            if (field.getOccursCount() > 0 && !field.getChildren().isEmpty()) {
                 int singleOccurrenceLength = field.getLength() / field.getOccursCount();
                 int currentPos = field.getStartPosition();
 

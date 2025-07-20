@@ -49,7 +49,6 @@ public class CopybookParserFacade {
     }
 
     private int extractRecordLength(List<String> lines, List<CobolToken> tokens) {
-        // Priority 1: Check for "* REC LEN" comment
         Pattern commentPattern = Pattern.compile("^\\*\\s*REC\\s+LEN\\s*:\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
         for (String line : lines) {
             Matcher matcher = commentPattern.matcher(line.trim());
@@ -58,7 +57,6 @@ public class CopybookParserFacade {
             }
         }
 
-        // Priority 2: Find the base 01 record and parse its PIC clause
         for (CobolToken token : tokens) {
             if (token.getLevel() == 1 && token.getRedefines() == null && token.getPicture() != null) {
                 Pattern picPattern = Pattern.compile("[Xx]\\((\\d+)\\)");

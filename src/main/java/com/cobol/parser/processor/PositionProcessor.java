@@ -5,25 +5,20 @@ import com.cobol.parser.model.ParseResult;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Calculates the start position, end position, and byte length for every field in the AST.
- * This processor uses a non-recursive, stack-based traversal to prevent StackOverflowError
- * when handling complex nested REDEFINES clauses.
- */
 public class PositionProcessor implements AstProcessor {
 
-    private static class TraversalState {
-        CobolField field;
-        int childIndex = 0;
-        int startPosition;
+    private static class PositionTracker {
+        int currentPosition = 1;
 
-        TraversalState(CobolField field, int startPosition) {
-            this.field = field;
-            this.startPosition = startPosition;
+        void advance(int length) {
+            currentPosition += length;
+        }
+
+        void set(int position) {
+            this.currentPosition = position;
         }
     }
 
@@ -32,15 +27,18 @@ public class PositionProcessor implements AstProcessor {
         if (parseResult.getReferenceFields().isEmpty()) {
             return;
         }
-        // Create a flat map for quick lookups, which is essential for resolving REDEFINES.
+
         Map<String, CobolField> fieldMap = new HashMap<>();
         for (CobolField rootField : parseResult.getReferenceFields()) {
             flattenFieldMap(rootField, fieldMap);
         }
 
-        // Process positions for the entire raw structure.
         for (CobolField rootField : parseResult.getReferenceFields()) {
-            calculateAllPositions(rootField, fieldMap);
+            calculateMainLayoutPositions(rootField, new PositionTracker());
+        }
+
+        for (CobolField rootField : parseResult.getReferenceFields()) {
+            calculateRedefinesPositions(rootField, fieldMap);
         }
     }
 
@@ -52,80 +50,54 @@ public class PositionProcessor implements AstProcessor {
         }
     }
 
-    /**
-     * Calculates positions for all fields using a non-recursive, iterative approach
-     * to completely avoid StackOverflowErrors.
-     */
-    private void calculateAllPositions(CobolField root, Map<String, CobolField> fieldMap) {
-        Stack<TraversalState> stack = new Stack<>();
-        stack.push(new TraversalState(root, 1));
-
-        while (!stack.isEmpty()) {
-            TraversalState currentState = stack.peek();
-            CobolField currentField = currentState.field;
-
-            // Pre-order processing: Set start position when first visiting a node.
-            if (currentState.childIndex == 0) {
-                // If it's a redefines, get its start position from the target field.
-                if (currentField.getRedefines() != null) {
-                    CobolField target = fieldMap.get(currentField.getRedefines());
-                    if (target != null && target.getStartPosition() > 0) {
-                        currentField.setStartPosition(target.getStartPosition());
-                    } else {
-                        // Fallback if target hasn't been processed, although the flat map helps.
-                        currentField.setStartPosition(currentState.startPosition);
-                    }
-                } else {
-                    currentField.setStartPosition(currentState.startPosition);
-                }
-                analyzePictureAndSetType(currentField);
-            }
-
-            // Process children
-            if (currentState.childIndex < currentField.getChildren().size()) {
-                CobolField child = currentField.getChildren().get(currentState.childIndex);
-                // The next child starts where the current one does, unless it's a REDEFINES.
-                int childStartPosition = currentField.getStartPosition();
-                if (currentState.childIndex > 0) {
-                    CobolField previousSibling = currentField.getChildren().get(currentState.childIndex - 1);
-                    if (previousSibling.getRedefines() == null) {
-                        childStartPosition = previousSibling.getEndPosition() + 1;
-                    } else {
-                        // If previous was a redefines, this child starts where the previous one started.
-                        childStartPosition = previousSibling.getStartPosition();
-                    }
-                }
-                currentState.childIndex++;
-                stack.push(new TraversalState(child, childStartPosition));
-            } else {
-                // Post-order processing: All children have been processed, so now we can calculate length.
-                int fieldLength;
-                if (!currentField.getChildren().isEmpty()) {
-                    // Group length is from its start to the end of its last non-redefining child.
-                    int maxEndPos = currentField.getStartPosition() -1;
-                    for(CobolField child : currentField.getChildren()){
-                        if(child.getRedefines() == null) {
-                            maxEndPos = Math.max(maxEndPos, child.getEndPosition());
-                        }
-                    }
-                    fieldLength = maxEndPos - currentField.getStartPosition() + 1;
-                } else {
-                    // Elementary field length is from its PIC clause.
-                    fieldLength = countCharacterPositions(currentField.getPicture());
-                }
-
-                if (currentField.getOccursCount() > 0) {
-                    fieldLength *= currentField.getOccursCount();
-                }
-
-                currentField.setLength(fieldLength);
-                currentField.setEndPosition(currentField.getStartPosition() + fieldLength - 1);
-                stack.pop();
-            }
+    private void calculateMainLayoutPositions(CobolField field, PositionTracker tracker) {
+        if (field.getRedefines() != null) {
+            return;
         }
+
+        field.setStartPosition(tracker.currentPosition);
+        analyzePictureAndSetType(field);
+
+        if (!field.getChildren().isEmpty()) {
+            for (CobolField child : field.getChildren()) {
+                calculateMainLayoutPositions(child, tracker);
+            }
+        } else {
+            tracker.advance(countCharacterPositions(field.getPicture()));
+        }
+
+        int fieldLength = tracker.currentPosition - field.getStartPosition();
+        if (field.getOccursCount() > 0) {
+            tracker.advance(fieldLength * (field.getOccursCount() - 1));
+            fieldLength *= field.getOccursCount();
+        }
+
+        field.setLength(fieldLength);
+        field.setEndPosition(field.getStartPosition() + field.getLength() - 1);
     }
 
-    // --- Helper Methods (Unchanged but included for completeness) ---
+    private void calculateRedefinesPositions(CobolField field, Map<String, CobolField> fieldMap) {
+        if (field.getRedefines() != null) {
+            CobolField targetField = fieldMap.get(field.getRedefines());
+            if (targetField != null) {
+                field.setStartPosition(targetField.getStartPosition());
+
+                PositionTracker redefinesTracker = new PositionTracker();
+                redefinesTracker.set(field.getStartPosition());
+
+                for (CobolField child : field.getChildren()) {
+                    calculateMainLayoutPositions(child, redefinesTracker);
+                }
+
+                field.setLength(redefinesTracker.currentPosition - field.getStartPosition());
+                field.setEndPosition(field.getStartPosition() + field.getLength() - 1);
+            }
+        }
+
+        for (CobolField child : field.getChildren()) {
+            calculateRedefinesPositions(child, fieldMap);
+        }
+    }
 
     private void analyzePictureAndSetType(CobolField field) {
         if (field.getPicture() == null) {
@@ -149,26 +121,19 @@ public class PositionProcessor implements AstProcessor {
     }
 
     private int countCharacterPositions(String pictureClause) {
-        if (pictureClause == null || pictureClause.isEmpty()) {
-            return 0;
-        }
-
+        if (pictureClause == null || pictureClause.isEmpty()) return 0;
         int totalLength = 0;
         Pattern repetitionPattern = Pattern.compile("([X9A])\\((\\d+)\\)");
         Matcher matcher = repetitionPattern.matcher(pictureClause);
-
         StringBuffer tempClause = new StringBuffer();
         while (matcher.find()) {
             totalLength += Integer.parseInt(matcher.group(2));
             matcher.appendReplacement(tempClause, "");
         }
         matcher.appendTail(tempClause);
-
         String remainingPart = tempClause.toString();
         for (char c : remainingPart.toCharArray()) {
-            if ("X9A".indexOf(c) != -1) {
-                totalLength++;
-            }
+            if ("X9A".indexOf(c) != -1) totalLength++;
         }
         return totalLength;
     }
