@@ -32,41 +32,32 @@ public class CopybookParserFacade {
 
     public ParseResult parse(Path copybookPath) throws IOException {
         List<String> lines = FileUtils.readLines(copybookPath);
+        int recordLength = extractRecordLength(lines);
+
         List<CobolToken> tokens = tokenizer.tokenize(lines);
-
-        int recordLength = extractRecordLength(lines, tokens);
-
         ParseResult result = astBuilder.build(tokens);
         result.setFileName(copybookPath.getFileName().toString());
         result.setTotalLength(recordLength);
 
         // --- Processing Pipeline ---
+        // 1. Calculate initial positions for the raw AST
         positionProcessor.process(result);
+        // 2. Identify copybook pattern and create distinct record layouts
         layoutProcessor.process(result);
+        // 3. Expand OCCURS clauses within the generated layouts
         occursProcessor.process(result);
 
         return result;
     }
 
-    private int extractRecordLength(List<String> lines, List<CobolToken> tokens) {
-        Pattern commentPattern = Pattern.compile("^\\*\\s*REC\\s+LEN\\s*:\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
+    private int extractRecordLength(List<String> lines) {
+        Pattern pattern = Pattern.compile("\\*\\s*REC\\s+LEN\\s*:\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
         for (String line : lines) {
-            Matcher matcher = commentPattern.matcher(line.trim());
+            Matcher matcher = pattern.matcher(line);
             if (matcher.find()) {
                 return Integer.parseInt(matcher.group(1));
             }
         }
-
-        for (CobolToken token : tokens) {
-            if (token.getLevel() == 1 && token.getRedefines() == null && token.getPicture() != null) {
-                Pattern picPattern = Pattern.compile("[Xx]\\((\\d+)\\)");
-                Matcher matcher = picPattern.matcher(token.getPicture());
-                if (matcher.find()) {
-                    return Integer.parseInt(matcher.group(1));
-                }
-            }
-        }
-
-        return 300; // Final fallback default
+        return 0; // If not found, it will be calculated from the base record later
     }
 }
