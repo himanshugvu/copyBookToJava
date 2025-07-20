@@ -11,7 +11,7 @@ import java.nio.file.Paths;
 public class Main {
     public static void main(String[] args) {
         try {
-            String file = "employee-record.cbl";
+            String file = "AN.txt";
             Path copybookPath = Paths.get(file);
             String outputFile = FileUtils.removeExtension(file) + ".json";
             CopybookParserFacade parser = new CopybookParserFacade();

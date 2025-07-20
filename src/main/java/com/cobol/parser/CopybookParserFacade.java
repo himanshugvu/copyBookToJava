@@ -32,37 +32,41 @@ public class CopybookParserFacade {
 
     public ParseResult parse(Path copybookPath) throws IOException {
         List<String> lines = FileUtils.readLines(copybookPath);
-        int recordLength = extractRecordLength(lines);
-
         List<CobolToken> tokens = tokenizer.tokenize(lines);
-        // The AstBuilder now returns a ParseResult containing the raw AST in `referenceFields`
+
+        int recordLength = extractRecordLength(lines, tokens);
+
         ParseResult result = astBuilder.build(tokens);
         result.setFileName(copybookPath.getFileName().toString());
         result.setTotalLength(recordLength);
 
         // --- Processing Pipeline ---
-        // 1. Calculate initial positions and lengths for the raw AST
         positionProcessor.process(result);
-        // 2. Intelligently create record layouts based on the detected copybook pattern
         layoutProcessor.process(result);
-        // 3. Expand OCCURS clauses within the final, generated layouts
         occursProcessor.process(result);
-
-        // Clear the raw reference fields, as they have been processed into layouts
-        // and are no longer needed in the final output.
-        result.getReferenceFields().clear();
 
         return result;
     }
 
-    private int extractRecordLength(List<String> lines) {
-        Pattern pattern = Pattern.compile("\\*\\s*REC\\s+LEN\\s*:\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
+    private int extractRecordLength(List<String> lines, List<CobolToken> tokens) {
+        Pattern commentPattern = Pattern.compile("^\\*.*(?:REC\\s+LEN|RECORD\\s+SIZE)\\s*:\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
         for (String line : lines) {
-            Matcher matcher = pattern.matcher(line);
+            Matcher matcher = commentPattern.matcher(line.trim());
             if (matcher.find()) {
                 return Integer.parseInt(matcher.group(1));
             }
         }
-        return 300; // Default fallback
+
+        for (CobolToken token : tokens) {
+            if (token.getLevel() == 1 && token.getRedefines() == null && token.getPicture() != null) {
+                Pattern picPattern = Pattern.compile("[Xx]\\((\\d+)\\)");
+                Matcher matcher = picPattern.matcher(token.getPicture());
+                if (matcher.find()) {
+                    return Integer.parseInt(matcher.group(1));
+                }
+            }
+        }
+
+        return 0; // Let the processor calculate it if not found
     }
 }

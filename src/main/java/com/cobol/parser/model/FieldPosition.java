@@ -1,13 +1,9 @@
 package com.cobol.parser.model;
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Data @NoArgsConstructor @AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class FieldPosition {
     private String name;

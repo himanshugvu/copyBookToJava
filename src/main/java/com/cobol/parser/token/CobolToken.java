@@ -1,7 +1,5 @@
 package com.cobol.parser.token;
-
 import lombok.Data;
-
 @Data
 public class CobolToken {
     private int level;
