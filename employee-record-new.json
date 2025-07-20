@@ -1,0 +1,280 @@
+{
+  "fileName" : "employee-record.cbl",
+  "totalLength" : 300,
+  "referenceFields" : [ {
+    "level" : 1,
+    "name" : "BTBMS-RECORD",
+    "picture" : "X(250)",
+    "startPosition" : 1,
+    "endPosition" : 251,
+    "length" : 251,
+    "dataType" : "STRING",
+    "signed" : false,
+    "decimal" : false,
+    "decimalPlaces" : 0,
+    "occursCount" : 0
+  } ],
+  "recordLayouts" : [ {
+    "name" : "EMPLOYEE-HDR-RECORD",
+    "redefines" : "BTBMS-RECORD",
+    "startPosition" : 1,
+    "endPosition" : 0,
+    "length" : 300,
+    "description" : "Layout for EMPLOYEE-HDR-RECORD",
+    "fields" : [ {
+      "level" : 3,
+      "name" : "EMP-ID",
+      "picture" : "9(8)",
+      "startPosition" : 1,
+      "endPosition" : 4,
+      "length" : 4,
+      "dataType" : "NUMBER",
+      "usage" : "COMP",
+      "signed" : false,
+      "decimal" : false,
+      "decimalPlaces" : 0,
+      "occursCount" : 0
+    }, {
+      "level" : 3,
+      "name" : "EMP-NAME",
+      "picture" : "X(50)",
+      "startPosition" : 5,
+      "endPosition" : 55,
+      "length" : 51,
+      "dataType" : "STRING",
+      "signed" : false,
+      "decimal" : false,
+      "decimalPlaces" : 0,
+      "occursCount" : 0
+    }, {
+      "level" : 3,
+      "name" : "FILLER",
+      "picture" : "X(192)",
+      "startPosition" : 56,
+      "endPosition" : 248,
+      "length" : 193,
+      "dataType" : "NUMBER",
+      "signed" : false,
+      "decimal" : false,
+      "decimalPlaces" : 0,
+      "occursCount" : 0
+    } ]
+  }, {
+    "name" : "EMPLOYEE-DATA-RECORD",
+    "redefines" : "BTBMS-RECORD",
+    "startPosition" : 1,
+    "endPosition" : 0,
+    "length" : 300,
+    "description" : "Layout for EMPLOYEE-DATA-RECORD",
+    "fields" : [ {
+      "level" : 3,
+      "name" : "EMP-SALARY",
+      "picture" : "9(7)V99",
+      "startPosition" : 1,
+      "endPosition" : 5,
+      "length" : 5,
+      "dataType" : "NUMBER",
+      "usage" : "COMP-3",
+      "signed" : false,
+      "decimal" : true,
+      "decimalPlaces" : 2,
+      "occursCount" : 0
+    }, {
+      "level" : 3,
+      "name" : "EMP-HIRE-DATE",
+      "picture" : "9(8)",
+      "startPosition" : 6,
+      "endPosition" : 9,
+      "length" : 4,
+      "dataType" : "NUMBER",
+      "usage" : "COMP",
+      "signed" : false,
+      "decimal" : false,
+      "decimalPlaces" : 0,
+      "occursCount" : 0
+    }, {
+      "level" : 3,
+      "name" : "EMP-STATUS",
+      "picture" : "X",
+      "startPosition" : 10,
+      "endPosition" : 10,
+      "length" : 1,
+      "dataType" : "STRING",
+      "signed" : false,
+      "decimal" : false,
+      "decimalPlaces" : 0,
+      "occursCount" : 0,
+      "conditionNames" : [ {
+        "name" : "ACTIVE",
+        "value" : "A"
+      }, {
+        "name" : "INACTIVE",
+        "value" : "I"
+      }, {
+        "name" : "TERMINATED",
+        "value" : "T"
+      } ]
+    }, {
+      "level" : 3,
+      "name" : "EMP-BENEFITS",
+      "startPosition" : 11,
+      "endPosition" : 40,
+      "length" : 30,
+      "dataType" : "GROUP",
+      "signed" : false,
+      "decimal" : false,
+      "decimalPlaces" : 0,
+      "occursCount" : 5,
+      "arrayElements" : [ {
+        "index" : 1,
+        "startPosition" : 11,
+        "endPosition" : 16,
+        "length" : 6,
+        "fields" : [ {
+          "name" : "BENEFIT-CODE",
+          "startPosition" : 11,
+          "endPosition" : 12,
+          "length" : 2,
+          "picture" : "XX",
+          "dataType" : "STRING"
+        }, {
+          "name" : "BENEFIT-AMOUNT",
+          "startPosition" : 13,
+          "endPosition" : 16,
+          "length" : 4,
+          "picture" : "9(5)V99",
+          "dataType" : "NUMBER",
+          "usage" : "COMP-3"
+        } ]
+      }, {
+        "index" : 2,
+        "startPosition" : 17,
+        "endPosition" : 22,
+        "length" : 6,
+        "fields" : [ {
+          "name" : "BENEFIT-CODE",
+          "startPosition" : 17,
+          "endPosition" : 18,
+          "length" : 2,
+          "picture" : "XX",
+          "dataType" : "STRING"
+        }, {
+          "name" : "BENEFIT-AMOUNT",
+          "startPosition" : 19,
+          "endPosition" : 22,
+          "length" : 4,
+          "picture" : "9(5)V99",
+          "dataType" : "NUMBER",
+          "usage" : "COMP-3"
+        } ]
+      }, {
+        "index" : 3,
+        "startPosition" : 23,
+        "endPosition" : 28,
+        "length" : 6,
+        "fields" : [ {
+          "name" : "BENEFIT-CODE",
+          "startPosition" : 23,
+          "endPosition" : 24,
+          "length" : 2,
+          "picture" : "XX",
+          "dataType" : "STRING"
+        }, {
+          "name" : "BENEFIT-AMOUNT",
+          "startPosition" : 25,
+          "endPosition" : 28,
+          "length" : 4,
+          "picture" : "9(5)V99",
+          "dataType" : "NUMBER",
+          "usage" : "COMP-3"
+        } ]
+      }, {
+        "index" : 4,
+        "startPosition" : 29,
+        "endPosition" : 34,
+        "length" : 6,
+        "fields" : [ {
+          "name" : "BENEFIT-CODE",
+          "startPosition" : 29,
+          "endPosition" : 30,
+          "length" : 2,
+          "picture" : "XX",
+          "dataType" : "STRING"
+        }, {
+          "name" : "BENEFIT-AMOUNT",
+          "startPosition" : 31,
+          "endPosition" : 34,
+          "length" : 4,
+          "picture" : "9(5)V99",
+          "dataType" : "NUMBER",
+          "usage" : "COMP-3"
+        } ]
+      }, {
+        "index" : 5,
+        "startPosition" : 35,
+        "endPosition" : 40,
+        "length" : 6,
+        "fields" : [ {
+          "name" : "BENEFIT-CODE",
+          "startPosition" : 35,
+          "endPosition" : 36,
+          "length" : 2,
+          "picture" : "XX",
+          "dataType" : "STRING"
+        }, {
+          "name" : "BENEFIT-AMOUNT",
+          "startPosition" : 37,
+          "endPosition" : 40,
+          "length" : 4,
+          "picture" : "9(5)V99",
+          "dataType" : "NUMBER",
+          "usage" : "COMP-3"
+        } ]
+      } ]
+    }, {
+      "level" : 3,
+      "name" : "EMP-TEST",
+      "picture" : "X(10)",
+      "startPosition" : 41,
+      "endPosition" : 51,
+      "length" : 11,
+      "dataType" : "STRING",
+      "signed" : false,
+      "decimal" : false,
+      "decimalPlaces" : 0,
+      "occursCount" : 0
+    } ]
+  }, {
+    "name" : "EMPLOYEE-TRAIL-RECORD",
+    "redefines" : "BTBMS-RECORD",
+    "startPosition" : 1,
+    "endPosition" : 0,
+    "length" : 300,
+    "description" : "Layout for EMPLOYEE-TRAIL-RECORD",
+    "fields" : [ {
+      "level" : 3,
+      "name" : "EMP-DEPT",
+      "picture" : "X(10)",
+      "startPosition" : 1,
+      "endPosition" : 11,
+      "length" : 11,
+      "dataType" : "STRING",
+      "signed" : false,
+      "decimal" : false,
+      "decimalPlaces" : 0,
+      "occursCount" : 0
+    }, {
+      "level" : 3,
+      "name" : "FILLER",
+      "picture" : "X(192)",
+      "startPosition" : 12,
+      "endPosition" : 204,
+      "length" : 193,
+      "dataType" : "NUMBER",
+      "signed" : false,
+      "decimal" : false,
+      "decimalPlaces" : 0,
+      "occursCount" : 0
+    } ]
+  } ]
+}

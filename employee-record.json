@@ -1,0 +1,293 @@
+{
+  "fileName" : "employee-record.cbl",
+  "totalLength" : 250,
+  "referenceFields" : [ {
+    "level" : 1,
+    "name" : "BTBMS-RECORD",
+    "picture" : "X(250)",
+    "startPosition" : 1,
+    "endPosition" : 250,
+    "length" : 250,
+    "dataType" : "STRING",
+    "usage" : "Text/ASCII format (1 byte per character)",
+    "signed" : false,
+    "decimal" : false,
+    "decimalPlaces" : 0,
+    "occursCount" : 0
+  } ],
+  "recordLayouts" : [ {
+    "name" : "EMPLOYEE-HDR-RECORD",
+    "redefines" : "BTBMS-RECORD",
+    "startPosition" : 1,
+    "endPosition" : 0,
+    "length" : 250,
+    "description" : "Memory overlay of BTBMS-RECORD",
+    "fields" : [ {
+      "level" : 3,
+      "name" : "EMP-ID",
+      "picture" : "9(8)",
+      "startPosition" : 1,
+      "endPosition" : 8,
+      "length" : 8,
+      "dataType" : "NUMBER",
+      "usage" : "Binary format (2, 4, or 8 bytes)",
+      "signed" : false,
+      "decimal" : false,
+      "decimalPlaces" : 0,
+      "occursCount" : 0
+    }, {
+      "level" : 3,
+      "name" : "EMP-NAME",
+      "picture" : "X(50)",
+      "startPosition" : 9,
+      "endPosition" : 58,
+      "length" : 50,
+      "dataType" : "STRING",
+      "usage" : "Text/ASCII format (1 byte per character)",
+      "signed" : false,
+      "decimal" : false,
+      "decimalPlaces" : 0,
+      "occursCount" : 0
+    }, {
+      "level" : 3,
+      "name" : "FILLER",
+      "picture" : "X(192)",
+      "startPosition" : 59,
+      "endPosition" : 250,
+      "length" : 192,
+      "dataType" : "STRING",
+      "usage" : "Text/ASCII format (1 byte per character)",
+      "signed" : false,
+      "decimal" : false,
+      "decimalPlaces" : 0,
+      "occursCount" : 0
+    } ]
+  }, {
+    "name" : "EMPLOYEE-DATA-RECORD",
+    "redefines" : "BTBMS-RECORD",
+    "startPosition" : 1,
+    "endPosition" : 0,
+    "length" : 250,
+    "description" : "Memory overlay of BTBMS-RECORD",
+    "fields" : [ {
+      "level" : 3,
+      "name" : "EMP-SALARY",
+      "picture" : "9(7)V99",
+      "startPosition" : 1,
+      "endPosition" : 9,
+      "length" : 9,
+      "dataType" : "NUMBER",
+      "usage" : "Packed decimal format (space efficient)",
+      "signed" : false,
+      "decimal" : true,
+      "decimalPlaces" : 2,
+      "occursCount" : 0
+    }, {
+      "level" : 3,
+      "name" : "EMP-HIRE-DATE",
+      "picture" : "9(8)",
+      "startPosition" : 10,
+      "endPosition" : 17,
+      "length" : 8,
+      "dataType" : "NUMBER",
+      "usage" : "Binary format (2, 4, or 8 bytes)",
+      "signed" : false,
+      "decimal" : false,
+      "decimalPlaces" : 0,
+      "occursCount" : 0
+    }, {
+      "level" : 3,
+      "name" : "EMP-STATUS",
+      "picture" : "X",
+      "startPosition" : 18,
+      "endPosition" : 18,
+      "length" : 1,
+      "dataType" : "STRING",
+      "usage" : "Text/ASCII format (1 byte per character)",
+      "signed" : false,
+      "decimal" : false,
+      "decimalPlaces" : 0,
+      "occursCount" : 0,
+      "conditionNames" : [ {
+        "name" : "ACTIVE",
+        "value" : "A"
+      }, {
+        "name" : "INACTIVE",
+        "value" : "I"
+      }, {
+        "name" : "TERMINATED",
+        "value" : "T"
+      } ]
+    }, {
+      "level" : 3,
+      "name" : "EMP-BENEFITS",
+      "startPosition" : 19,
+      "endPosition" : 63,
+      "length" : 45,
+      "dataType" : "GROUP",
+      "usage" : "Text/ASCII format (1 byte per character)",
+      "signed" : false,
+      "decimal" : false,
+      "decimalPlaces" : 0,
+      "occursCount" : 5,
+      "arrayElements" : [ {
+        "index" : 1,
+        "startPosition" : 19,
+        "endPosition" : 27,
+        "length" : 9,
+        "fields" : [ {
+          "name" : "BENEFIT-CODE",
+          "startPosition" : 19,
+          "endPosition" : 20,
+          "length" : 2,
+          "picture" : "XX",
+          "dataType" : "STRING",
+          "usage" : "Text/ASCII format (1 byte per character)"
+        }, {
+          "name" : "BENEFIT-AMOUNT",
+          "startPosition" : 21,
+          "endPosition" : 27,
+          "length" : 7,
+          "picture" : "9(5)V99",
+          "dataType" : "NUMBER",
+          "usage" : "Packed decimal format (space efficient)"
+        } ]
+      }, {
+        "index" : 2,
+        "startPosition" : 28,
+        "endPosition" : 36,
+        "length" : 9,
+        "fields" : [ {
+          "name" : "BENEFIT-CODE",
+          "startPosition" : 28,
+          "endPosition" : 29,
+          "length" : 2,
+          "picture" : "XX",
+          "dataType" : "STRING",
+          "usage" : "Text/ASCII format (1 byte per character)"
+        }, {
+          "name" : "BENEFIT-AMOUNT",
+          "startPosition" : 30,
+          "endPosition" : 36,
+          "length" : 7,
+          "picture" : "9(5)V99",
+          "dataType" : "NUMBER",
+          "usage" : "Packed decimal format (space efficient)"
+        } ]
+      }, {
+        "index" : 3,
+        "startPosition" : 37,
+        "endPosition" : 45,
+        "length" : 9,
+        "fields" : [ {
+          "name" : "BENEFIT-CODE",
+          "startPosition" : 37,
+          "endPosition" : 38,
+          "length" : 2,
+          "picture" : "XX",
+          "dataType" : "STRING",
+          "usage" : "Text/ASCII format (1 byte per character)"
+        }, {
+          "name" : "BENEFIT-AMOUNT",
+          "startPosition" : 39,
+          "endPosition" : 45,
+          "length" : 7,
+          "picture" : "9(5)V99",
+          "dataType" : "NUMBER",
+          "usage" : "Packed decimal format (space efficient)"
+        } ]
+      }, {
+        "index" : 4,
+        "startPosition" : 46,
+        "endPosition" : 54,
+        "length" : 9,
+        "fields" : [ {
+          "name" : "BENEFIT-CODE",
+          "startPosition" : 46,
+          "endPosition" : 47,
+          "length" : 2,
+          "picture" : "XX",
+          "dataType" : "STRING",
+          "usage" : "Text/ASCII format (1 byte per character)"
+        }, {
+          "name" : "BENEFIT-AMOUNT",
+          "startPosition" : 48,
+          "endPosition" : 54,
+          "length" : 7,
+          "picture" : "9(5)V99",
+          "dataType" : "NUMBER",
+          "usage" : "Packed decimal format (space efficient)"
+        } ]
+      }, {
+        "index" : 5,
+        "startPosition" : 55,
+        "endPosition" : 63,
+        "length" : 9,
+        "fields" : [ {
+          "name" : "BENEFIT-CODE",
+          "startPosition" : 55,
+          "endPosition" : 56,
+          "length" : 2,
+          "picture" : "XX",
+          "dataType" : "STRING",
+          "usage" : "Text/ASCII format (1 byte per character)"
+        }, {
+          "name" : "BENEFIT-AMOUNT",
+          "startPosition" : 57,
+          "endPosition" : 63,
+          "length" : 7,
+          "picture" : "9(5)V99",
+          "dataType" : "NUMBER",
+          "usage" : "Packed decimal format (space efficient)"
+        } ]
+      } ]
+    }, {
+      "level" : 3,
+      "name" : "EMP-TEST",
+      "picture" : "X(10)",
+      "startPosition" : 64,
+      "endPosition" : 73,
+      "length" : 10,
+      "dataType" : "STRING",
+      "usage" : "Text/ASCII format (1 byte per character)",
+      "signed" : false,
+      "decimal" : false,
+      "decimalPlaces" : 0,
+      "occursCount" : 0
+    } ]
+  }, {
+    "name" : "EMPLOYEE-TRAIL-RECORD",
+    "redefines" : "BTBMS-RECORD",
+    "startPosition" : 1,
+    "endPosition" : 0,
+    "length" : 250,
+    "description" : "Memory overlay of BTBMS-RECORD",
+    "fields" : [ {
+      "level" : 3,
+      "name" : "EMP-DEPT",
+      "picture" : "X(10)",
+      "startPosition" : 1,
+      "endPosition" : 10,
+      "length" : 10,
+      "dataType" : "STRING",
+      "usage" : "Text/ASCII format (1 byte per character)",
+      "signed" : false,
+      "decimal" : false,
+      "decimalPlaces" : 0,
+      "occursCount" : 0
+    }, {
+      "level" : 3,
+      "name" : "FILLER",
+      "picture" : "X(192)",
+      "startPosition" : 11,
+      "endPosition" : 202,
+      "length" : 192,
+      "dataType" : "STRING",
+      "usage" : "Text/ASCII format (1 byte per character)",
+      "signed" : false,
+      "decimal" : false,
+      "decimalPlaces" : 0,
+      "occursCount" : 0
+    } ]
+  } ]
+}
