@@ -16,8 +16,8 @@ public class PositionProcessor implements AstProcessor {
         void advance(int length) { currentPosition += length; }
         void set(int position) { currentPosition = position; }
         void savePosition(String fieldName) { fieldStartPositions.put(fieldName, currentPosition); }
-        void restoreForRedefines(String targetField) {
-            set(fieldStartPositions.getOrDefault(targetField, 1));
+        int getPositionOf(String fieldName) {
+            return fieldStartPositions.getOrDefault(fieldName, 1);
         }
     }
 
@@ -31,7 +31,8 @@ public class PositionProcessor implements AstProcessor {
 
     private void calculatePositions(CobolField field, PositionTracker tracker) {
         if (field.getRedefines() != null) {
-            tracker.restoreForRedefines(field.getRedefines());
+            processRedefinesField(field, tracker);
+            return;
         }
 
         field.setStartPosition(tracker.currentPosition);
@@ -41,26 +42,31 @@ public class PositionProcessor implements AstProcessor {
 
         int fieldLength;
         if (!field.getChildren().isEmpty()) {
-            PositionTracker childTracker = new PositionTracker();
-            childTracker.set(tracker.currentPosition);
             for (CobolField child : field.getChildren()) {
-                calculatePositions(child, childTracker);
+                calculatePositions(child, tracker);
             }
-            fieldLength = childTracker.currentPosition - tracker.currentPosition;
+            fieldLength = tracker.currentPosition - field.getStartPosition();
         } else {
+            // Elementary field, calculate length from PIC.
             fieldLength = countCharacterPositions(field.getPicture());
+            tracker.advance(fieldLength); // Advance the tracker
         }
 
         if (field.getOccursCount() > 0) {
+            tracker.advance(fieldLength * (field.getOccursCount() - 1));
             fieldLength *= field.getOccursCount();
         }
 
         field.setLength(fieldLength);
         field.setEndPosition(field.getStartPosition() + fieldLength - 1);
+    }
 
-        if (field.getRedefines() == null) {
-            tracker.advance(fieldLength);
-        }
+    private void processRedefinesField(CobolField field, PositionTracker mainTracker) {
+        PositionTracker redefinesTracker = new PositionTracker();
+        redefinesTracker.fieldStartPositions = mainTracker.fieldStartPositions; // Share the map of known positions
+        int startPos = mainTracker.getPositionOf(field.getRedefines());
+        redefinesTracker.set(startPos);
+        calculatePositions(field, redefinesTracker);
     }
 
     private void analyzePictureAndSetType(CobolField field) {
@@ -90,12 +96,12 @@ public class PositionProcessor implements AstProcessor {
         }
 
         int totalLength = 0;
-        Pattern repetitionPattern = Pattern.compile("[X9A]\\((\\d+)\\)");
+        Pattern repetitionPattern = Pattern.compile("([X9A])\\((\\d+)\\)");
         Matcher matcher = repetitionPattern.matcher(pictureClause);
 
         StringBuffer tempClause = new StringBuffer();
         while (matcher.find()) {
-            totalLength += Integer.parseInt(matcher.group(1));
+            totalLength += Integer.parseInt(matcher.group(2));
             matcher.appendReplacement(tempClause, "");
         }
         matcher.appendTail(tempClause);
