@@ -8,10 +8,11 @@ import java.util.List;
  * This processor is the "brain" of the parser. It analyzes the raw AST
  * to detect the copybook's structural pattern (e.g., multiple independent 01-levels,
  * multiple 01-level REDEFINES, or a shared record type field) and constructs the
- * appropriate record layouts. This version fixes the UnsupportedOperationException.
+ * appropriate record layouts. This version correctly handles all identified patterns.
  */
 public class LayoutProcessor implements AstProcessor {
 
+    // Enum to clearly define the different structural patterns the parser can handle.
     private enum CopybookPattern {
         MULTIPLE_INDEPENDENT_01_LEVELS,
         MULTIPLE_01_LEVEL_REDEFINES,
@@ -21,8 +22,10 @@ public class LayoutProcessor implements AstProcessor {
 
     @Override
     public void process(ParseResult parseResult) {
+        // Step 1: Analyze the structure of the raw AST to determine the pattern.
         CopybookPattern pattern = detectPattern(parseResult.getReferenceFields());
 
+        // Step 2: Route to the appropriate processing method based on the pattern.
         switch (pattern) {
             case MULTIPLE_INDEPENDENT_01_LEVELS:
                 processIndependent01Levels(parseResult);
@@ -34,25 +37,30 @@ public class LayoutProcessor implements AstProcessor {
                 processSharedRecordType(parseResult);
                 break;
             default:
-                // Handle cases where no specific multi-layout pattern is detected,
-                // for example, a simple copybook with only one 01-level record.
+                // Handle simple cases with only one 01-level record and no special patterns.
                 processSingleLayout(parseResult);
                 break;
         }
     }
 
+    /**
+     * The core detection logic. It inspects the 01-level records to choose a pattern.
+     */
     private CopybookPattern detectPattern(List<CobolField> rootFields) {
         if (rootFields.isEmpty()) return CopybookPattern.UNKNOWN;
 
         long count01Levels = rootFields.stream().filter(f -> f.getLevel() == 1).count();
         long count01Redefines = rootFields.stream().filter(f -> f.getLevel() == 1 && f.getRedefines() != null).count();
 
+        // Case 1 (ANFDTXNI): Multiple 01s, no REDEFINES linking them.
         if (count01Levels > 1 && count01Redefines == 0) {
             return CopybookPattern.MULTIPLE_INDEPENDENT_01_LEVELS;
         }
+        // Case 2 (employee-record): Multiple 01s, at least one REDEFINES another.
         if (count01Redefines > 0) {
             return CopybookPattern.MULTIPLE_01_LEVEL_REDEFINES;
         }
+        // Case 3 (CAONPOST): A single 01 record that contains a shared type field.
         if (rootFields.size() == 1 && findSharedRecordTypeField(rootFields.get(0)) != null) {
             return CopybookPattern.SHARED_RECORD_TYPE;
         }
@@ -61,28 +69,30 @@ public class LayoutProcessor implements AstProcessor {
     }
 
     /**
-     * Handles copybooks with multiple independent 01-level record definitions.
+     * Handles the ANFDTXNI pattern: Multiple independent 01-level records.
+     * Each 01-level becomes its own RecordLayout.
      */
     private void processIndependent01Levels(ParseResult result) {
         for (CobolField rootField : result.getReferenceFields()) {
             if (rootField.getLevel() == 1) {
                 RecordLayout layout = new RecordLayout(rootField.getName());
-                layout.setStartPosition(1);
+                layout.setStartPosition(1); // Each layout is independent.
                 layout.setLength(rootField.getLength());
                 layout.setEndPosition(rootField.getEndPosition());
                 layout.setDescription("Independent Record Layout for " + rootField.getName());
+
                 for (CobolField child : rootField.getChildren()) {
                     layout.getFields().add(deepCopy(child));
                 }
                 result.getRecordLayouts().add(layout);
             }
         }
-        // After creating layouts, clear the reference fields as they are now represented in the layouts.
+        // The raw root fields have been processed into layouts, so we can clear them.
         result.getReferenceFields().clear();
     }
 
     /**
-     * Handles copybooks with multiple 01-level records redefining a single base buffer.
+     * Handles the employee-record pattern: 01-levels redefining a single base record.
      */
     private void processMultiple01Levels(ParseResult result) {
         CobolField baseRecord = findBaseRecord(result.getReferenceFields());
@@ -101,12 +111,12 @@ public class LayoutProcessor implements AstProcessor {
                 result.getRecordLayouts().add(layout);
             }
         }
-        // FIX: Create a new MUTABLE list instead of an immutable one.
+        // Keep only the base record as the reference for clarity.
         result.setReferenceFields(new ArrayList<>(List.of(baseRecord)));
     }
 
     /**
-     * Handles copybooks with a single 01-level containing a shared record type field.
+     * Handles the CAONPOST pattern: A single 01-level with a shared record type field.
      */
     private void processSharedRecordType(ParseResult result) {
         CobolField mainRecord = result.getReferenceFields().get(0);
@@ -130,27 +140,30 @@ public class LayoutProcessor implements AstProcessor {
                 result.getRecordLayouts().add(layout);
             }
         }
-        // FIX: Create a new MUTABLE list instead of an immutable one.
         result.setReferenceFields(new ArrayList<>(List.of(mainRecord)));
     }
 
     /**
-     * Handles simple cases with only one 01-level record and no special patterns.
+     * Fallback for simple copybooks with only one 01-level record.
      */
     private void processSingleLayout(ParseResult result) {
         if (result.getReferenceFields().isEmpty()) return;
         CobolField rootField = result.getReferenceFields().get(0);
+
         RecordLayout layout = new RecordLayout(rootField.getName());
         layout.setStartPosition(1);
         layout.setLength(rootField.getLength());
         layout.setEndPosition(rootField.getEndPosition());
         layout.setDescription("Primary Record Layout");
+
         for (CobolField child : rootField.getChildren()) {
             layout.getFields().add(deepCopy(child));
         }
         result.getRecordLayouts().add(layout);
         result.getReferenceFields().clear();
     }
+
+    // --- Helper Methods ---
 
     private CobolField findBaseRecord(List<CobolField> rootFields) {
         return rootFields.stream().filter(f -> f.getLevel() == 1 && f.getRedefines() == null).findFirst().orElse(null);
@@ -172,7 +185,6 @@ public class LayoutProcessor implements AstProcessor {
         }
         return null;
     }
-
     private CobolField deepCopy(CobolField original) {
         CobolField copy = new CobolField(original.getLevel(), original.getName());
         copy.setPicture(original.getPicture());
