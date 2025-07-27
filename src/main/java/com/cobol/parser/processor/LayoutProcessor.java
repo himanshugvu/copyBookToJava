@@ -1,6 +1,10 @@
 package com.cobol.parser.processor;
 
-import com.cobol.parser.model.*;
+import com.cobol.parser.model.CobolField;
+import com.cobol.parser.model.ConditionName;
+import com.cobol.parser.model.ParseResult;
+import com.cobol.parser.model.RecordLayout;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -101,7 +105,6 @@ public class LayoutProcessor implements AstProcessor {
         for (CobolField field : result.getReferenceFields()) {
             if (field.getLevel() == 1 && field.getRedefines() != null) {
                 RecordLayout layout = new RecordLayout(field.getName());
-                layout.setRedefines(field.getRedefines());
                 layout.setStartPosition(1);
                 layout.setLength(result.getTotalLength());
                 layout.setDescription("Memory overlay of " + field.getRedefines());
@@ -127,10 +130,8 @@ public class LayoutProcessor implements AstProcessor {
             CobolField layoutStructure = findStructureForCondition(mainRecord, condition.getName());
             if (layoutStructure != null) {
                 RecordLayout layout = new RecordLayout(layoutStructure.getName());
-                layout.setRedefines(layoutStructure.getRedefines());
                 layout.setStartPosition(1);
                 layout.setLength(result.getTotalLength());
-                layout.getRecordTypeValues().add(condition.getValue());
                 layout.setDescription(layoutStructure.getName() + " - identified when " + recordTypeField.getName() + " = '" + condition.getValue() + "'");
 
                 layout.getFields().add(deepCopy(recordTypeField));

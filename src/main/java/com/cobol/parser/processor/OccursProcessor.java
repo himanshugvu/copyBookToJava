@@ -1,6 +1,7 @@
 package com.cobol.parser.processor;
 
 import com.cobol.parser.model.*;
+
 import java.util.List;
 
 public class OccursProcessor implements AstProcessor {

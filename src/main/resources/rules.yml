@@ -1,0 +1,54 @@
+rules:
+  - id: "rule1"
+    description: "Shared Record Type (e.g., CAONPOST)"
+    identifier:
+      type: "FIELD_VALUE_MATCH"
+      position: 1
+      length: 2
+    layouts:
+      # copybookRecordName points to the 05-level sub-record within the 01-level container
+      - value: "00"
+        copybookRecordName: "CAONPOST-HEADER-RECORD"
+        layoutName: "HEADER"
+      - value: "01"
+        copybookRecordName: "CAONPOST-DETAIL-RECORD"
+        layoutName: "DETAIL"
+      - value: "99"
+        copybookRecordName: "CAONPOST-TRAILER-RECORD"
+        layoutName: "TRAILER"
+
+  - id: "rule2"
+    description: "Multiple 01-level REDEFINES (e.g., employee-record)"
+    identifier:
+      type: "FIELD_VALUE_MATCH" # This is just an example; could be SPEL
+      position: 1
+      length: 1
+    layouts:
+      - value: "H"
+        copybookRecordName: "EMPLOYEE-HDR-RECORD"
+        layoutName: "HEADER"
+      - value: "D"
+        copybookRecordName: "EMPLOYEE-DATA-RECORD"
+        layoutName: "DATA"
+      - value: "T"
+        copybookRecordName: "EMPLOYEE-TRAIL-RECORD"
+        layoutName: "TRAILER"
+
+  - id: "rule3"
+    description: "Multiple Independent 01-levels (e.g., ANFDTXNI)"
+    identifier:
+      type: "SPEL_CONDITION"
+    layouts:
+      - condition: "#record.substring(0, 2) == 'HD'"
+        copybookRecordName: "ANFDTXNI-HEADER"
+        layoutName: "HEADER"
+      - condition: "true" # Default/else case
+        copybookRecordName: "ANFDTXNI-DETAIL"
+        layoutName: "DETAIL"
+
+  - id: "rule4"
+    description: "Single layout file (no record type)"
+    identifier:
+      type: "SINGLE_LAYOUT"
+    layouts:
+      - layoutName: "DATA" # The name for the single layout
